@@ -2,15 +2,13 @@
 <html>
   <head>
     <title>MRRC Safety Test</title>
-    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css">
-    <link href="https://unpkg.com/@jspsych/plugin-survey@0.2.2/css/survey.css" rel="text/css">
-    <script src="https://unpkg.com/jspsych@7.3.4"> </script>
-    <script src="https://unpkg.com/@jspsych/plugin-survey@0.2.2"> </script>
+    <link href="https://unpkg.com/jspsych/css/jspsych.css" rel="stylesheet" type="text/css">
+    <script src="https://unpkg.com/jspsych"> </script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response"> </script>
   </head>
   <body></body>
   <script>
-    const jsPsych = initJsPsych();
-    const questions = {
+const questions = {
 'on':     {'prompt': 'The magnet is only on when the scanner is making noise.',
            'correct': 'False',
            'wrong': ['True'],
@@ -21,57 +19,69 @@
            'message': 'MRI scanners can kill in seconds if safety is ignored.'},
 }
 
-function feedback_msg(message){
-    //const correct = jsPsych.data.get().last(1).values()[0].correct;
-    console.log("feedback: ", jsPsych.data.get());
-    const correct = true;
-    const ctext = correct?"CORRECT":"<span style=color:red>INCORRECT</span>";
-    return `<p>  ${ctext} ${message}</p>`;
+function feedback_msg(){
+    const prev = jsPsych.data.get().last(1).values()[0];
+    //const correct = true;
+    const ctext = (prev.correct)?"CORRECT":"<span style=color:red>INCORRECT</span>";
+    return `<p>  ${ctext} ${prev.message}</p>`;
 }
-const feedback = { 'type': 'html', prompt: "", on_start: (x) => console.log(feedback_msg())  };
+const feedback = { type: jsPsychHtmlButtonResponse, stimulus: feedback_msg, choices: ["Next"], };
 
 function mk_question(qkey) {
     const q = questions[qkey];
-    console.log(q);
+    var choices = q["wrong"].concat(q["correct"]);
+    choices = jsPsych.randomization.shuffle(choices);
     return {
-      type: 'multi-choice',
-      prompt: q["prompt"],
-      options: q["wrong"].concat(q["correct"]),
-      correct_response: q["correct"],
-      option_reorder: "random",
-      required: true,
-      on_finish: function(data) { 
-          console.log("response: ", data.response)
-          //already set by suvey plugin?
-          //data.correct = data.response == q["correct"]
-      }};
+      type: jsPsychHtmlButtonResponse,
+      stimulus: q["prompt"],
+      data: {message: q['message']},
+      choices: choices,
+      on_finish: function(data) {
+          data.correct = choices[data.response] == q['correct'];
+      }
+    };
 }
 
-function mk_pages(){
+function questions_with_feedback(){
     const q = Object.keys(questions);
     const q_r = jsPsych.randomization.shuffle(q);
-    const q_and_fbk = q_r.map(qkey=>[[mk_question(qkey)],[feedback]]).flat();
+    const q_and_fbk = q_r.map(qkey=>[mk_question(qkey),feedback]).flat();
     return q_and_fbk;
-    /* like
-    return [
-     [mk_question('magnet')],
-     [feedback]];
-    */
+    // like: return [mk_question('on'), feedback, ...];
 }
-    
-var survey = {
-  type: jsPsychSurvey,
-  pages: mk_pages,
-  title: 'MR Safety',
-  button_label_next: 'Continue',
-  button_label_back: 'Previous',
-  //button_label_finish: 'Submit',
-  show_question_numbers: 'on',
-  on_finish: function(data) { console.log("TODO: check score shuffle and restart if bad");}
-};
-    
 
-    jsPsych.run([survey]);
+function run_if_failed(data){
+
+    // after this is run with all correct done is set
+    if( data.trials[data.trials.length-1].done ) {
+       console.log("actually done. TODO: save data somewhere?");
+       return true;
+    }
+
+    const n_tot = Object.keys(questions).length;
+    //NB data.trials.length == 2*n_tot. question + feedback
+    // on second ass data.trials.length == 2 (reps) * 2*n_tot +1 (1 for fail slide)
+    const n_seen = data.trials.length;
+    const n_cor = data.trials.slice(n_seen-n_tot*2).map(x=>x.correct?1:0).reduce((a,b)=>a+b);
+    console.log("seen, total, cor", n_seen,n_tot,n_cor);
+    if(n_cor!=n_tot){
+        const failed = { type: jsPsychHtmlButtonResponse,
+                         stimulus: `You answered ${n_cor} out of ${n_tot} correctly. You need to try again!`,
+                         choices: ["Restart"], };
+        jsPsych.run([failed].concat(questions_with_feedback()));
+    } else {
+        console.log("TODO: write confirmation code")
+        const conf_code = "Xxxx";
+        const success = { type: jsPsychHtmlButtonResponse,
+                        stimulus: `You answered all correct!<br>Your confirmation code is ${conf_code}`,
+                        on_finish: function(data) { data.done=true; },
+                        choices: ["Done"], };
+        jsPsych.run([success]);
+    }
+}
+
+const jsPsych = initJsPsych({on_finish: run_if_failed});
+jsPsych.run(questions_with_feedback());
 
   </script>
 </html>
