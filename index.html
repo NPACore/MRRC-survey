@@ -17,6 +17,22 @@ const questions = {
            'correct': 'True',
            'wrong': ['False'],
            'message': 'MRI scanners can kill in seconds if safety is ignored.'},
+'earplug':  {'prompt': 'A subject dislikes things on their ears and doesn’t want to wear earplugs, so it is okay for them to not wear ear plugs during the scan.',
+           'correct': 'False',
+           'wrong': ['True'],
+           'message': 'Earplug use is mandatory and is a safety issue because the scanner can damage hearing.'},
+'metal':  {'prompt': 'Leaving someone in normal clothing with metal snaps and buttons during a scan is a safety concern due to the possibility of:',
+           'correct': 'Burns from heating metal.',
+           'wrong':  ['Subject discomfort from hard edges while laying still',
+                      'Metal artifacts in the image.',
+                      'None of the above.', ],
+           'message': 'Burns from heating metal. The varying magnetic field can heat metal, even metal not near the body part being scanned.'},
+'implant':  {'prompt': 'A participant has an electronic implant but says they’ve had MRIs before. What should the research team do?',
+           'correct': 'Every device must be researched and checked against manufacturer safety requiresments every time.',
+           'wrong':  ['Nothing. They have been scanned before, so it must be safe.',
+                      'Do not scan them at all',
+                      'The device is safe so long as we only scan the brain', ],
+           'message': 'Every device must be researched, every time.'},
 }
 
 function feedback_msg(){
