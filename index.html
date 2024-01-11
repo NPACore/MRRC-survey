@@ -50,6 +50,12 @@ function questions_with_feedback(){
     // like: return [mk_question('on'), feedback, ...];
 }
 
+function gen_code() {
+   const num  = Date.now().toString().slice(13-6); // now has 13 digits
+   const code = num.match(/.{2}/g).map(x=>String.fromCharCode(parseInt(x%26)+97));
+   return num + code.join("");
+}
+
 function run_if_failed(data){
 
     // after this is run with all correct done is set
@@ -71,10 +77,10 @@ function run_if_failed(data){
         jsPsych.run([failed].concat(questions_with_feedback()));
     } else {
         console.log("TODO: write confirmation code")
-        const conf_code = "Xxxx";
+        const comf_code = gen_code();
         const success = { type: jsPsychHtmlButtonResponse,
-                        stimulus: `You answered all correct!<br>Your confirmation code is ${conf_code}`,
-                        on_finish: function(data) { data.done=true; },
+                        stimulus: `You answered all correct!<br>Your confirmation code is <br><b>${comf_code}<b>`,
+                        data: {done: true, code: comf_code, },
                         choices: ["Done"], };
         jsPsych.run([success]);
     }
